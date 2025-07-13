@@ -6,15 +6,20 @@ import PostCard from "./PostCard";
 import { useState } from "react";
 import CommentsModal from "./CommentsModal";
 
-const PostsList = ({ username }: { username?: string }) => {
-  const { currentUser } = useCurrentUser();
+interface PostsListProps {
+  username?: string;
+  onUserPress?: (username: string) => void;
+}
+
+const PostsList = ({ username, onUserPress }: PostsListProps) => {
+  const { currentUser, isLoading: isUserLoading } = useCurrentUser();
   const { posts, isLoading, error, refetch, toggleLike, deletePost, checkIsLiked } =
     usePosts(username);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
   const selectedPost = selectedPostId ? posts.find((p: Post) => p._id === selectedPostId) : null;
 
-  if (isLoading) {
+  if (isLoading || isUserLoading || !currentUser) {
     return (
       <View className="p-8 items-center">
         <ActivityIndicator size="large" color="#1DA1F2" />
@@ -51,6 +56,7 @@ const PostsList = ({ username }: { username?: string }) => {
           onLike={toggleLike}
           onDelete={deletePost}
           onComment={(post: Post) => setSelectedPostId(post._id)}
+          onUserPress={onUserPress}
           currentUser={currentUser}
           isLiked={checkIsLiked(post.likes, currentUser)}
         />

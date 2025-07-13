@@ -11,6 +11,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 interface CommentsModalProps {
   selectedPost: Post;
@@ -18,7 +19,7 @@ interface CommentsModalProps {
 }
 
 const CommentsModal = ({ selectedPost, onClose }: CommentsModalProps) => {
-  const { commentText, setCommentText, createComment, isCreatingComment } = useComments();
+  const { commentText, setCommentText, createComment, isCreatingComment, deleteComment, isDeletingComment } = useComments();
   const { currentUser } = useCurrentUser();
 
   const handleClose = () => {
@@ -82,13 +83,23 @@ const CommentsModal = ({ selectedPost, onClose }: CommentsModalProps) => {
                 />
 
                 <View className="flex-1">
-                  <View className="flex-row items-center mb-1">
-                    <Text className="font-bold text-gray-900 mr-1">
-                      {comment.user.firstName} {comment.user.lastName}
-                    </Text>
-                    <Text className="text-gray-500 text-sm ml-1">@{comment.user.username}</Text>
+                  <View className="flex-row items-center mb-1 justify-between">
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <Text className="font-bold text-gray-900 mr-1">
+                        {comment.user.firstName} {comment.user.lastName}
+                      </Text>
+                      <Text className="text-gray-500 text-sm ml-1">@{comment.user.username}</Text>
+                    </View>
+                    {currentUser && comment.user._id === currentUser._id && (
+                      <TouchableOpacity
+                        onPress={() => deleteComment(comment._id)}
+                        disabled={isDeletingComment}
+                        style={{ marginLeft: 8 }}
+                      >
+                        <Feather name="trash" size={18} color="#E0245E" />
+                      </TouchableOpacity>
+                    )}
                   </View>
-
                   <Text className="text-gray-900 text-base leading-5 mb-2">{comment.content}</Text>
                 </View>
               </View>

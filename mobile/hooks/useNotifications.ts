@@ -1,38 +1,49 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useApiClient } from "../utils/api";
+import { useEffect, useRef, useState } from 'react';
+import * as Notifications from 'expo-notifications';
+import { useCurrentUser } from './useCurrentUser';
+import { 
+  registerForPushNotificationsAsync, 
+  storeDeviceToken
+} from '../utils/notifications';
 
 export const useNotifications = () => {
-  const api = useApiClient();
-  const queryClient = useQueryClient();
+  const { currentUser } = useCurrentUser();
+  const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
+  const [notification, setNotification] = useState<Notifications.Notification | null>(null);
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
 
-  const {
-    data: notificationsData,
-    isLoading,
-    error,
-    refetch,
-    isRefetching,
-  } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: () => api.get("/notifications"),
-    select: (res) => res.data.notifications,
-  });
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(token => {
+      setExpoPushToken(token);
+      if (token && currentUser?._id) {
+        storeDeviceToken(currentUser._id, token);
+      }
+    });
 
-  const deleteNotificationMutation = useMutation({
-    mutationFn: (notificationId: string) => api.delete(`/notifications/${notificationId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-  });
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification: Notifications.Notification) => {
+      setNotification(notification);
+    });
 
-  const deleteNotification = (notificationId: string) => {
-    deleteNotificationMutation.mutate(notificationId);
-  };
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
+      console.log('Notification tapped:', response);
+      // Handle navigation to conversation if needed
+      const data = response.notification.request.content.data;
+      if (data?.conversationId) {
+        // Navigate to conversation
+        console.log('Navigate to conversation:', data.conversationId);
+      }
+    });
 
-  return {
-    notifications: notificationsData || [],
-    isLoading,
-    error,
-    refetch,
-    isRefetching,
-    deleteNotification,
-    isDeletingNotification: deleteNotificationMutation.isPending,
-  };
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, [currentUser]);
+
+  return { expoPushToken, notification };
 };

@@ -10,7 +10,9 @@ interface NotificationCardProps {
 
 const NotificationCard = ({ notification, onDelete }: NotificationCardProps) => {
   const getNotificationText = () => {
-    const name = `${notification.from.firstName} ${notification.from.lastName}`;
+    const name = notification.from
+      ? `${notification.from.firstName || "Unknown"} ${notification.from.lastName || "User"}`
+      : "Unknown User";
     switch (notification.type) {
       case "like":
         return `${name} liked your post`;
@@ -52,7 +54,7 @@ const NotificationCard = ({ notification, onDelete }: NotificationCardProps) => 
       <View className="flex-row p-4">
         <View className="relative mr-3">
           <Image
-            source={{ uri: notification.from.profilePicture }}
+            source={{ uri: notification.from?.profilePicture || undefined }}
             className="size-12 rounded-full"
           />
 
@@ -66,9 +68,9 @@ const NotificationCard = ({ notification, onDelete }: NotificationCardProps) => 
             <View className="flex-1">
               <Text className="text-gray-900 text-base leading-5 mb-1">
                 <Text className="font-semibold">
-                  {notification.from.firstName} {notification.from.lastName}
+                  {notification.from?.firstName || "Unknown"} {notification.from?.lastName || "User"}
                 </Text>
-                <Text className="text-gray-500"> @{notification.from.username}</Text>
+                <Text className="text-gray-500"> @{notification.from?.username || "unknown"}</Text>
               </Text>
               <Text className="text-gray-700 text-sm mb-2">{getNotificationText()}</Text>
             </View>
@@ -81,9 +83,9 @@ const NotificationCard = ({ notification, onDelete }: NotificationCardProps) => 
           {notification.post && (
             <View className="bg-gray-50 rounded-lg p-3 mb-2">
               <Text className="text-gray-700 text-sm mb-1" numberOfLines={3}>
-                {notification.post.content}
+                {notification.post?.content || "No content"}
               </Text>
-              {notification.post.image && (
+              {notification.post?.image && (
                 <Image
                   source={{ uri: notification.post.image }}
                   className="w-full h-32 rounded-lg mt-2"
@@ -97,7 +99,7 @@ const NotificationCard = ({ notification, onDelete }: NotificationCardProps) => 
             <View className="bg-blue-50 rounded-lg p-3 mb-2">
               <Text className="text-gray-600 text-xs mb-1">Comment:</Text>
               <Text className="text-gray-700 text-sm" numberOfLines={2}>
-                &ldquo;{notification.comment.content}&rdquo;
+                &ldquo;{notification.comment?.content || "No comment"}&rdquo;
               </Text>
             </View>
           )}

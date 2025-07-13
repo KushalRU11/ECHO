@@ -1,146 +1,152 @@
-import { useComments } from "@/hooks/useComments";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { Post } from "@/types";
 import {
   View,
   Text,
   Modal,
   TouchableOpacity,
-  ScrollView,
-  Image,
-  TextInput,
   ActivityIndicator,
+  ScrollView,
+  TextInput,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
-interface CommentsModalProps {
-  selectedPost: Post;
+interface EditProfileModalProps {
+  isVisible: boolean;
   onClose: () => void;
+  formData: {
+    firstName: string;
+    lastName: string;
+    bio: string;
+    location: string;
+    profilePicture?: string;
+    bannerImage?: string;
+  };
+  saveProfile: () => void;
+  updateFormField: (field: string, value: string) => void;
+  isUpdating: boolean;
 }
 
-const CommentsModal = ({ selectedPost, onClose }: CommentsModalProps) => {
-  const { commentText, setCommentText, createComment, isCreatingComment } = useComments();
-  const { currentUser } = useCurrentUser();
-
-  const handleClose = () => {
+const EditProfileModal = ({
+  formData,
+  isUpdating,
+  isVisible,
+  onClose,
+  saveProfile,
+  updateFormField,
+}: EditProfileModalProps) => {
+  const handleSave = () => {
+    saveProfile();
     onClose();
-    setCommentText("");
+  };
+
+  const pickImage = async (field: "profilePicture" | "bannerImage") => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.status !== "granted") {
+      alert("Permission to access media library is required!");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: field === "bannerImage" ? [3, 1] : [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      updateFormField(field, result.assets[0].uri);
+    }
   };
 
   return (
-    <Modal visible={!!selectedPost} animationType="slide" presentationStyle="pageSheet">
-      {/* MODAL HEADER */}
+    <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet">
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-100">
-        <TouchableOpacity onPress={handleClose}>
-          <Text className="text-blue-500 text-lg">Close</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Text className="text-blue-500 text-lg">Cancel</Text>
         </TouchableOpacity>
-        <Text className="text-lg font-semibold">Comments</Text>
-        <View className="w-12" />
+
+        <Text className="text-lg font-semibold">Edit Profile</Text>
+
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={isUpdating}
+          className={`${isUpdating ? "opacity-50" : ""}`}
+        >
+          {isUpdating ? (
+            <ActivityIndicator size="small" color="#1DA1F2" />
+          ) : (
+            <Text className="text-blue-500 text-lg font-semibold">Save</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {selectedPost && (
-        <ScrollView className="flex-1">
-          {/* ORIGINAL POST */}
-          <View className="border-b border-gray-100 bg-white p-4">
-            <View className="flex-row">
-              <Image
-                source={{ uri: selectedPost.user.profilePicture }}
-                className="size-12 rounded-full mr-3"
-              />
-
-              <View className="flex-1">
-                <View className="flex-row items-center mb-1">
-                  <Text className="font-bold text-gray-900 mr-1">
-                    {selectedPost.user.firstName} {selectedPost.user.lastName}
-                  </Text>
-                  <Text className="text-gray-500 ml-1">@{selectedPost.user.username}</Text>
-                </View>
-
-                {selectedPost.content && (
-                  <Text className="text-gray-900 text-base leading-5 mb-3">
-                    {selectedPost.content}
-                  </Text>
-                )}
-
-                {selectedPost.image && (
-                  <Image
-                    source={{ uri: selectedPost.image }}
-                    className="w-full h-48 rounded-2xl mb-3"
-                    resizeMode="cover"
-                  />
-                )}
-              </View>
-            </View>
+      <ScrollView className="flex-1 px-4 py-6">
+        {/* Banner Image Picker */}
+        <View className="mb-4 items-center">
+          <TouchableOpacity onPress={() => pickImage("bannerImage")}
+            style={{ width: "100%", height: 100, backgroundColor: "#f3f4f6", borderRadius: 12, overflow: "hidden", justifyContent: "center", alignItems: "center" }}>
+            {formData.bannerImage ? (
+              <Image source={{ uri: formData.bannerImage }} style={{ width: "100%", height: 100, resizeMode: "cover" }} />
+            ) : (
+              <Text className="text-gray-400">Pick Banner Image</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+        {/* Profile Image Picker */}
+        <View className="mb-4 items-center">
+          <TouchableOpacity onPress={() => pickImage("profilePicture")}
+            style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: "#f3f4f6", justifyContent: "center", alignItems: "center", overflow: "hidden", borderWidth: 2, borderColor: "#fff", marginTop: -48 }}>
+            {formData.profilePicture ? (
+              <Image source={{ uri: formData.profilePicture }} style={{ width: 96, height: 96, borderRadius: 48 }} />
+            ) : (
+              <Text className="text-gray-400">Pick Profile Image</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+        <View className="space-y-4">
+          <View>
+            <Text className="text-gray-500 text-sm mb-2">First Name</Text>
+            <TextInput
+              className="border border-gray-200 rounded-lg p-3 text-base"
+              value={formData.firstName}
+              onChangeText={(text) => updateFormField("firstName", text)}
+              placeholder="Your first name"
+            />
           </View>
 
-          {/* COMMENTS LIST */}
-          {selectedPost.comments.map((comment) => (
-            <View key={comment._id} className="border-b border-gray-100 bg-white p-4">
-              <View className="flex-row">
-                <Image
-                  source={{ uri: comment.user.profilePicture }}
-                  className="w-10 h-10 rounded-full mr-3"
-                />
-
-                <View className="flex-1">
-                  <View className="flex-row items-center mb-1">
-                    <Text className="font-bold text-gray-900 mr-1">
-                      {comment.user.firstName} {comment.user.lastName}
-                    </Text>
-                    <Text className="text-gray-500 text-sm ml-1">@{comment.user.username}</Text>
-                  </View>
-
-                  <Text className="text-gray-900 text-base leading-5 mb-2">{comment.content}</Text>
-                </View>
-              </View>
-            </View>
-          ))}
-
-          {/* ADD COMMENT INPUT */}
-
-          <View className="p-4 border-t border-gray-100">
-            <View className="flex-row">
-              <Image
-                source={{ uri: currentUser?.profilePicture }}
-                className="size-10 rounded-full mr-3"
-              />
-
-              <View className="flex-1">
-                <TextInput
-                  className="border border-gray-200 rounded-lg p-3 text-base mb-3"
-                  placeholder="Write a comment..."
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                />
-
-                <TouchableOpacity
-                  className={`px-4 py-2 rounded-lg self-start ${
-                    commentText.trim() ? "bg-blue-500" : "bg-gray-300"
-                  }`}
-                  onPress={() => createComment(selectedPost._id)}
-                  disabled={isCreatingComment || !commentText.trim()}
-                >
-                  {isCreatingComment ? (
-                    <ActivityIndicator size={"small"} color={"white"} />
-                  ) : (
-                    <Text
-                      className={`font-semibold ${
-                        commentText.trim() ? "text-white" : "text-gray-500"
-                      }`}
-                    >
-                      Reply
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
+          <View>
+            <Text className="text-gray-500 text-sm mb-2">Last Name</Text>
+            <TextInput
+              className="border border-gray-200 rounded-lg px-3 py-3 text-base"
+              value={formData.lastName}
+              onChangeText={(text) => updateFormField("lastName", text)}
+              placeholder="Your last name"
+            />
           </View>
-        </ScrollView>
-      )}
+
+          <View>
+            <Text className="text-gray-500 text-sm mb-2">Bio</Text>
+            <TextInput
+              className="border border-gray-200 rounded-lg px-3 py-3 text-base"
+              value={formData.bio}
+              onChangeText={(text) => updateFormField("bio", text)}
+              placeholder="Tell us about yourself"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View>
+            <Text className="text-gray-500 text-sm mb-2">Location</Text>
+            <TextInput
+              className="border border-gray-200 rounded-lg px-3 py-3 text-base"
+              value={formData.location}
+              onChangeText={(text) => updateFormField("location", text)}
+              placeholder="Where are you located?"
+            />
+          </View>
+        </View>
+      </ScrollView>
     </Modal>
   );
 };
 
-export default CommentsModal;
+export default EditProfileModal;
